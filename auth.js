@@ -3,37 +3,84 @@ const router = express.Router();
 const bcrypt = require("bcrypt");
 const User = require("./user");
 
-// REGISTER
+/* =========================
+   ✅ REGISTER
+========================= */
 router.post("/register", async (req, res) => {
-  const hashedPassword = await bcrypt.hash(req.body.password, 10);
+  try {
+    const { username, email, password } = req.body;
 
-  const user = new User({
-    username: req.body.username,
-    email: req.body.email,
-    password: hashedPassword,
-    role: "user"
-  });
+    // 🔍 Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.send("User already exists ❌");
+    }
 
-  await user.save();
-  res.redirect("/login");
-});
+    // 🔐 Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-// LOGIN
-router.post("/login", async (req, res) => {
-  const user = await User.findOne({ email: req.body.email });
+    // 💾 Save user
+    const user = new User({
+      username,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role: "user"
+    });
 
-  if (user && await bcrypt.compare(req.body.password, user.password)) {
-    req.session.user = user;
-    res.redirect("/dashboard");
-  } else {
-    res.send("Invalid Credentials ❌");
+    await user.save();
+
+    res.redirect("/login");
+  } catch (err) {
+    console.log("REGISTER ERROR:", err);
+    res.send("Registration Failed ❌");
   }
 });
 
-// LOGOUT
+/* =========================
+   ✅ LOGIN
+========================= */
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    console.log("LOGIN BODY:", req.body); // 🔍 debug
+
+    // 🔍 Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      return res.send("User not found ❌");
+    }
+
+    // 🔐 Compare password
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.send("Invalid Password ❌");
+    }
+
+    // ✅ Store session
+    req.session.user = {
+      id: user._id,
+      username: user.username,
+      role: user.role
+    };
+
+    res.redirect("/dashboard");
+
+  } catch (err) {
+    console.log("LOGIN ERROR:", err);
+    res.send("Login Failed ❌");
+  }
+});
+
+/* =========================
+   ✅ LOGOUT
+========================= */
 router.get("/logout", (req, res) => {
-  req.session.destroy();
-  res.redirect("/login");
+  req.session.destroy(() => {
+    res.redirect("/login");
+  });
 });
 
 module.exports = router;
