@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,   // 🚨 prevents duplicate users
+    unique: true, 
     lowercase: true,
     trim: true
   },
@@ -26,6 +26,6 @@ const userSchema = new mongoose.Schema({
     default: "user"
   }
 
-}, { timestamps: true }); // adds createdAt & updatedAt
+}, { timestamps: true }); 
 
 module.exports = mongoose.model("User", userSchema);
